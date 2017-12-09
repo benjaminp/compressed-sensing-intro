@@ -1,0 +1,216 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{hyperref}
+\usepackage{mathrsfs}
+\usepackage{mathtools}
+\usepackage{textcomp}
+\usepackage{fullpage}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+
+\newcommand{\defterm}[1]{\textit{#1}}
+
+\title{A Compressed Introduction to Compressed Sensing}
+\author{Benjamin Peterson}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We attempt to convey a sense of compressed sensing. Specifically, we discuss how $\ell_1$ minimization and the restricted isometry property for matrices can be used for sparse recovery of underdetermined linear systems even in the presence of noise.
+\end{abstract}
+
+\section{Introduction}
+Suppose $A \in \mathcal{M}_{m\times n}(\mathbb{R})$ is a matrix and we obtain a measurement $y \in \mathbb{R}^m$, which we know to be the image of some $x \in \mathbb{R}^n$ under $A$. If the system $Ax = y$ is underdetermined (i.e., $m < n$), then $x$ is not unique. Suppose however that we want a single solution and we know $x$ is ``small''. We might try to pick an $x$ which solves the equation with the least $\ell_2$ norm by solving the convex program
+\begin{equation}\label{eq:l2-prog}
+\min_{x \in \mathbb{R}^n}\|x\|_{\ell_2}\qquad Ax = y.\tag{L}
+\end{equation}
+This program has the advantage that a unique solution is guaranteed. Unfortunately, the solution to \eqref{eq:l2-prog} is often not the best one for applications.
+
+Many real world signals are known to be sparse (i.e.\ having few nonzero entries) in some basis. Thus, we might alternatively seek a sparse solution for $Ax = y$. The sparsest solution to the linear equation is given by the program
+\begin{equation}\label{eq:l0-prog}
+\min_{x\in \mathbb{R}^n} \|x\|_{\ell_0}\qquad Ax = y.\tag{S}
+\end{equation}
+Here the ``norm'' $\|x\|_{\ell_0}$ counts the number of nonzero entries in a vector $x$. Solving \eqref{eq:l0-prog} is a difficult NP-hard problem—the subset-sum problem may be reduced to it—in combinatorial optimization \cite{sparse-np}. We will replace \eqref{eq:l0-prog} with the convex program
+\begin{equation}\label{eq:l1-prog}
+\min_{x \in \mathbb{R}^n}\|x\|_{\ell_1}\qquad Ax = y.\tag{P}
+\end{equation}
+Solving this program is often called ``basis pursuit'' and can be efficiently done with linear programming or specialized algorithms \cite[ch. 15]{foucart-intro}. Relating the solutions of \eqref{eq:l0-prog} and \eqref{eq:l1-prog} is major goal in compressed sensing which we will explore in this paper.
+
+There is an intuitive geometrical reason that we might expect the $\ell_1$ norm to be better at finding sparse solutions than the $\ell_2$ norm. The program~\eqref{eq:l2-prog} finds smallest ball around the origin that intersects the solution subspace of $Ax = y$. The level sets of the $\ell_1$ norm are polyhedra, which emphasize the axes. Therefore, it seems ``likely'' that the \eqref{eq:l1-prog} finds a sparse solution in the solution subspace.
+
+We now introduce a restriction on matrices that allows sparse solutions to be easily recovered. Recall that a vector is said to be $k$-sparse if it has at most $k$ nonzero entries.
+\begin{definition}[\cite{ct-decoding}]
+A matrix $A \in \mathcal{M}_{m\times n}(\mathbb{R})$ satisfies the \defterm{restricted isometry property} (RIP) of order $k$ if there exists a $\delta_k \geq 0$ such that for all $k$-sparse vectors $x \in \mathbb{R}^n$, $$(1 - \delta_k)\|x\|_{\ell_2}^2 \leq \|Ax\|_{\ell_2}^2 \leq (1 + \delta_k)\|x\|_{\ell_2}^2.$$
+The smallest such $\delta_k$ is called $A$'s \defterm{restricted isometry constant} of order $k$.
+\end{definition}
+Notice that $\delta_1 \leq \delta_2 \leq \dotsb$. The RIP is related to vector space frames \cite{ole-frames} and the Johnson-Lindenstrauss lemma \cite{rip-jl}. Unfortunately, checking whether a matrix has the restricted isometry property is NP-Hard in general \cite{rip-np}. On the other hand, many families of random matrices (e.g.\ having Gaussian or Bernoulli entries) satisfy the RIP with high probability \cite[\S 1.3]{ctr-stable}.
+
+\begin{theorem}[{\cite[lemma 1.2]{ct-decoding}}]\label{thm:unique-sparse}
+Suppose $A \in \mathcal{M}_{m\times n}$ satisfies RIP with $\delta_{2s} < 1$. Then the equation $Ax = y$ has an unique $s$-sparse solution given by \eqref{eq:l0-prog}.
+\end{theorem}
+\begin{proof}
+Suppose $x, x\in \mathbb{R}^m$ are $s$-sparse and $Ax = Ax'$. By the RIP,
+$$
+0 \leq (1 - \delta_{2s})\|x - x'\|_{\ell_2} \leq \|A(x - x')\|_{\ell_2} = 0.
+$$
+Necessarily, $x = x'$.
+\end{proof}
+
+Before stating the main theorem, we introduce the notion of error. In reality, we do not know $Ax$ exactly. Instead, we measure $y = Ax + z$, where $z \in \mathbb{R}^m$ is a small error vector satisfying $\|z\|_{\ell_2} \leq \epsilon$. We would like our recovery of $x$ to be robust against error. To deal with this, we generalize \eqref{eq:l1-prog} to the (still convex) program
+\begin{equation}\tag{P\textquotesingle}\label{eq:l1-approx}
+\min_{x \in \mathbb{R}^n}\|x\|_{\ell_1}\qquad \|Ax - y\|_{\ell_2} \leq \epsilon.
+\end{equation}
+
+Finally, we can state the main theorem of this lecture. We denote the vector containing only the $s$ largest entries of $x$ by $x_s$.
+\begin{theorem}[{\cite[1.3]{candes-rip}}]\label{thm:noisy-recovery}
+Suppose $A \in \mathcal{M}_{m\times n}(\mathbb{R})$ satisfies RIP with $\delta_{2s} < \sqrt{2} - 1$. Let $x^*$ denote the solution to \eqref{eq:l1-approx}. Then, there are constants $C_0, C_1$ depending only on $\delta_{2s}$ such that $$\|x^* - x\|_{\ell_2} \leq C_0s^{-1/2}\|x - x_s\|_{\ell_1} + C_1\epsilon.$$
+\end{theorem}
+
+Theorem~\ref{thm:noisy-recovery} tells us that when RIP holds, basis pursuit recovers solutions very close to sparse solutions of the equation.
+
+\section{Proof of Theorem~\ref{thm:noisy-recovery}}
+We closely follow \cite{candes-rip}.
+
+Set $x = x^* + h$. Our goal is to show $\|h\|_{\ell_2}$ is small. The RIP for $A$ only gives us control over sparse vectors, so we start by breaking $h$ up into $s$-sparse vectors. Let $T_0$ be the indexes of the $s$ largest entires of $x$. Let $T_1$ be the indexes of the $k$ largest entries of $h_{T_0^c}$. Let $T_2$ be the indexes of the $s$ largest entries of $h_{(T_0\cup T_1)^c}$ and so on. We observe that $h$ can be written as the sum of $s$-sparse vectors $h_{T_0} + h_{T_1} + h_{T_2} + \dotsb$. Using the triangle inequality,
+\begin{equation}\label{eq:main-triang}
+\|x - x^*\|_{\ell_2} = \|h\|_{\ell_2} \leq \|h_{T_0\cup T_1}\|_{\ell_2} + \|h_{(T_0\cup T_1)^c}\|_{\ell_2}.
+\end{equation}
+We will estimate the two terms of \eqref{eq:main-triang} separately and then combine them to prove the theorem. We start by showing the $\|h_{(T_0\cup T_1)^c}\|_{\ell_2}$ term can be bounded in terms of the first term $\|h_{T_0\cup T_1}\|_{\ell_2}$. Several useful intermediate inequalities are obtained along the way.
+
+\begin{lemma}[Tail estimates]\label{lem:tail-estimate}
+\begin{align}\label{eq:small-h1}
+\|h_{T_0^c}\|_{\ell_1} &\leq \|h_{T_0}\|_{\ell_1} + 2\|x_{T_0^c}\|_{\ell_1}
+\\
+\label{eq:tail-sum}
+\sum_{j \geq 2}\|h_{T_j}\|_{\ell_2} &\leq s^{-1/2}\|h_{T_0^c}\|_{\ell_1} \\
+\label{eq:small-h2}
+\|h_{(T_0\cup T_1)^c}\|_{\ell_2} &\leq \|h_{T_0}\|_{\ell_2} + 2s^{-1/2}\|x - x_s\|_{\ell_1}
+\end{align}
+\end{lemma}
+\begin{proof}
+Since $x$ is feasible for \eqref{eq:l1-approx} and $x^*$ is a minimum,
+$$
+\|x\|_{\ell_1} \geq \|x + h\|_{\ell_1} = \sum_{i \in T_0}|x_i + h_i| + \sum_{i \in T_0^c}|x_i + h_i| \geq \|x_{T_0}\|_{\ell_1} - \|h_{T_0}\|_{\ell_1} + \|h_{T_0^c}\|_{\ell_1} - \|x_{T_0^c}\|_{\ell_1}.
+$$
+The last step uses the triangle inequality twice. Rewriting and applying the reverse triangle inequality proves \eqref{eq:small-h1}.
+$$
+\|h_{T_0^c}\|_{\ell_1} \leq \|x\|_{\ell_1} - \|x_{T_0}\|_{\ell_1} + \|x_{T_0^c}\|_{\ell_1} + \|h_{T_0}\|_{\ell_1} \leq \|h_{T_0}\|_{\ell_1} + 2\|x_{T_0^c}\|_{\ell_1}
+$$
+
+If $j \geq 2$,
+$$
+\|h_{T_j}\|_{\ell_2} \leq s^{1/2}\|h_{T_j}\|_{\ell_\infty} \leq s^{-1/2}\|h_{T_{j - 1}}\|_{\ell_1}.
+$$
+Summing yields \eqref{eq:tail-sum}.
+$$
+\sum_{j \geq 2}\|h_{T_j}\|_{\ell_2} \leq s^{-1/2}\sum_{j \geq 1}\|h_{T_j}\|_{\ell_1}= s^{-1/2}\|h_{T_0^c}\|_{\ell_1}
+$$
+From this, we immediately obtain
+\begin{equation}\label{eq:small-h3}
+\|h_{(T_0\cup T_1)^c}\|_{\ell_2} = \left\|\sum_{j \geq 2}h_{T_j}\right\|_{\ell_2} \leq \sum_{j \geq 2}\|h_{T_j}\|_{\ell_2} \leq s^{-1/2}\|h_{T_0^c}\|_{\ell_1}.
+\end{equation}
+
+By the Cauchy-Schwarz inequality,
+\begin{equation}\label{eq:lem1-cs}
+\|h_{T_0}\|_{\ell_1} \leq s^{1/2}\|h_{T_0}\|_{\ell_2}.
+\end{equation}
+Applying \eqref{eq:small-h3}, \eqref{eq:small-h1}, and \eqref{eq:lem1-cs} proves \eqref{eq:small-h2}.
+$$
+\|h_{(T_0\cup T_1)^c}\|_{\ell_2} \leq s^{-1/2}\|h_{T_0^c}\|_{\ell_1} \leq s^{-1/2}(\|h_{T_0}\|_{\ell_1} + 2\|x_{T_0^c}\|_{\ell_1}) \leq \|h_{T_0}\|_{\ell_2} + 2s^{-1/2}\|x_{T_0^c}\|_{\ell_1}
+$$
+\end{proof}
+
+Next, we want to bound the main part of the error term $\|h_{T_0\cup T_1}\|_{\ell_2}$. We begin with a lemma.
+
+\begin{lemma}\label{lem:innner-control}
+Suppose $x$ and $x'$ are $s$-sparse and $s'$-sparse respectively and supported on disjoint sets. Then
+$$
+|\langle Ax, Ax'\rangle| \leq \delta_{s + s'}\|x\|_{\ell_2}\|x'\|_{\ell_2}
+$$
+\end{lemma}
+\begin{proof}
+We may assume without a loss of generality that $\|x\|_{\ell_2} = \|x'\|_{\ell_2} = 1$. The RIP tells us that
+$$
+2(1 - \delta_{s + s'}) = (1 - \delta_{s + s'})\|x + x'\|_{\ell_2}^2 \leq \|Ax \pm Ax'\|_{\ell_2}^2 \leq (1 + \delta_{s + s'})\|x + x'\|_{\ell_2}^2 = 2(1 - \delta_{s+s'}).
+$$
+By the polarization identity,
+$$
+|\langle Ax, Ax'\rangle| \leq \frac{1}4\left|\|Ax + Ax'\|_{\ell_2}^2 - \|Ax - Ax'\|_{\ell_2}^2\right| \leq \delta_{s + s'}.
+$$
+\end{proof}
+
+\begin{lemma}[Main term estimate]\label{lem:main-estimate}
+\begin{equation}\label{eq:main-term-est}
+\|h_{T_0\cup T_1}\|_{\ell_2} \leq (1 - \rho)^{-1}(\alpha\epsilon + 2\rho s^{-1/2}\|x - x_s\|_{\ell_1})
+\end{equation}
+where
+$$
+\alpha \equiv \frac{2\sqrt{1 - \delta_{2s}}}{1 - \delta_{2s}},\quad \rho \equiv \frac{\sqrt{2}\delta_{2s}}{1 - \delta_{2s}}.
+$$
+\end{lemma}
+\begin{proof}
+RIP allows us to control the size of $\|h_{T_0\cup T_1}\|_{\ell_2}$ with $\|Ah_{T_0\cup T_1}\|_{\ell_2}$, and so we start by bounding the latter. We break $\|Ah_{T_0\cup T_1}\|_{\ell_2}$ into parts using properties of the inner product.
+\begin{equation}\label{eq:main-bound}
+\|Ah_{T_0\cup T_1}\|_{\ell_2}^2 = \langle A h_{T_0\cup T_1}, Ah \rangle - \sum_{j \geq 2}\left(\langle A h_{T_0}, Ah_{T_j}\rangle + \langle Ah_{T_1}, Ah_{T_j}\rangle\right)
+\end{equation}
+From the triangle inequality and hypothesis,
+\begin{equation}\label{eq:Ah-bound}
+\|Ah\|_{\ell_2} = \|A(x - x^*)\|_{\ell_2} \leq \|Ax^* - y\|_{\ell_2} + \|y - Ax\|_{\ell_2} \leq 2\epsilon.
+\end{equation}
+The first term of \eqref{eq:main-bound} can be bounded using Cauchy-Schwarz, the RIP, and \eqref{eq:Ah-bound}.
+\begin{equation}\label{eq:first-term-est}
+|\langle Ah_{T_0\cup T_1}, Ah\rangle| \leq \|Ah_{T_0\cup T_1}\|_{\ell_2}\|Ah\|_{\ell_2} \leq 2\epsilon \sqrt{1 + \delta_{2s}}\|h_{T_0\cup T_1}\|_{\ell_2}
+\end{equation}
+Since $T_0$ and $T_1$ are disjoint Cauchy-Schwarz gives
+$$
+\|h_{T_0}\|_{\ell_2} + \|h_{T_1}\|_{\ell_2} \leq \sqrt{2}\|h_{T_0\cup T_1}\|_{\ell_2}.
+$$
+To estimate the sum term of \eqref{eq:Ah-bound}, we apply lemma~\ref{lem:innner-control} and \eqref{eq:tail-sum}.
+\begin{align}
+\sum_{j \geq 2}|\langle Ah_{T_0}, Ah_{T_j}\rangle| + |\langle Ah_{T_1}, Th_{T_j}\rangle| &\leq \delta_{2s}(\|h_{T_0}\|_{\ell_2} + \|h_{T_1}\|_{\ell_2})\sum_{j \geq 2}\|h_{T_j}\|_{\ell_2}
+\nonumber\\&\leq \delta_{2s}\sqrt{2}s^{-1/2}\|h_{T_0\cup T_1}\|_{\ell_2}\|h_{T_0^c}\|_{\ell_1} \label{eq:second-term-est}
+\end{align}
+We now have
+$$
+(1 - \delta_{2s})\|h_{T_0\cup T_1}\|_{\ell_2}^2 \leq \|Ah_{T_0\cup T_1}\|_{\ell_2}^2\leq \|h_{T_0\cup T_1}\|_{\ell_2}(2\epsilon\sqrt{1 +\delta_{2s}} + \sqrt{2}\delta_{2s}s^{-1/2}\|h_{T_0^c}\|_{\ell_1})
+$$
+from RIP, \eqref{eq:first-term-est}, and \eqref{eq:second-term-est}. We divide by $(1 - \delta_{2s})\|h_{T_0\cup T_1}\|_{\ell_2}$.
+$$
+\|h_{T_0\cup T_1}\|_{\ell_2} \leq \alpha\epsilon + \rho s^{-1/2}\|h_{T_0^c}\|_{\ell_1}
+$$
+From \eqref{eq:small-h1} and \eqref{eq:lem1-cs}, we obtain
+$$
+\|h_{T_0 \cup T_1}\|_{\ell_2} \leq \alpha\epsilon + \rho s^{-1/2}(\|h_{T_0}\|_{\ell_1} + 2\|x - x_s\|_{\ell_1}) \leq \alpha\epsilon + \rho \|h_{T_0\cup T_1}\|_{\ell_2} + 2\rho s^{-1/2}\|x - x_s\|_{\ell_1}.
+$$
+By the hypothesis of theorem~\ref{thm:noisy-recovery}, $\rho < 1$, and we get
+$$
+\|h_{T_0\cup T_1}\|_{\ell_2} \leq (1 - \rho)^{-1}(\alpha\epsilon + 2\rho s^{-1/2}\|x - x_s\|_{\ell_1}),
+$$
+which completes the lemma's proof.
+\end{proof}
+
+Applying our estimates \eqref{eq:small-h2} and lemma~\ref{lem:main-estimate} to the two terms of \eqref{eq:main-triang}, we have
+$$
+\|h\|_{\ell_2} \leq 2\|h_{(T_0\cup T_1)}\|_{\ell_2} + 2s^{-1/2}\|x - x_s\|_{\ell_1} \leq 2(1 - \rho)^{-1}(\alpha\epsilon + (1 + \rho)s^{-1/2}\|x - x_s\|_{\ell_1}).
+$$
+This completes the proof of theorem~\ref{thm:noisy-recovery}.
+
+\section{Remarks}
+A huge amount of research in compressed sensing has appeared since the publication of the original papers \cite{ctr-stable,donoho-cs} around 2004-2006. Among other things, researchers have investigated techniques for sparse recovery besides basis pursuit e.g.\ matching pursuit \cite{tg-matching}. There is also replacement condition for RIP called the nullspace property, which is a necessary and sufficient condition for \eqref{eq:l0-prog} and \eqref{eq:l1-prog} to have the same solutions \cite{nullspace}.
+
+As far as applications are concerned, compressed sensing is being used in areas as diverse as tomography, astronomy, machine linearing, linear coding, and experiment design \cite{cs-science,dantzig-selector}. It is particularly useful in situations where minimizing the work done in sensors is important such as space probes. Gimmicks like single-pixel cameras \cite{single-pixel} have captured the public imagination.
+
+Finally, for readers still curious, there are a lot of other (possibly more palatable) introductions to compressed sensing \cite{cw-intro,cs-book,foucart-intro,users-guide,kutyniok-cs,qaisar-compressive,romberg-intro}.
+
+\bibliographystyle{amsplain}
+\bibliography{compressed_sensing}
+
+\end{document}

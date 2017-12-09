@@ -1,0 +1,3 @@
+Copyright 2015 by Benjamin Peterson
+CC BY 4.0
+https://creativecommons.org/licenses/by/4.0/
